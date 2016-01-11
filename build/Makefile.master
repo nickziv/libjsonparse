@@ -1,0 +1,96 @@
+SRCDIR=			$(PWD)/../../src
+DRVDIR=			$(PWD)/../../drv
+TOOLS=			$(PWD)/../../tools
+TEST=			$(PWD)/../../test
+#
+# Insert The location for your ONBLD tools. Then uncomment CTF*_POSTPROC, and
+# recomment the blank one.
+#
+ONBLD_TOOLS=		
+DRV=			drv
+BENCH=			$(PWD)/../../bench
+# The benchmark results directory
+R_BENCH=		$(PWD)/bench
+FGDIR=			$(PWD)/fg
+BENCH_DRV=		$(BENCH)/main
+BENCH_PLOT=		$(BENCH)/rplots
+PREFIX=			/opt/libjsonparse/
+PAPREFIX=		/opt/libparse/
+SLPREFIX=		/opt/libslablist/
+GRPREFIX=		/opt/libgraph/
+
+FG_OUT=			$(FGDIR)/time/drv_fg.out
+FG_SVG=			$(FG_OUT:%.out=%.svg)
+FG_CMD=			./$(DRV)
+
+
+FG_TIME_STACKS=		'profile-1234hz /pid == $target/ {@[ustack()] = count();}'
+
+
+CTF=			$(ONBLD_TOOLS)/ctf
+CTFCONVERT=		$(CTF)/bin/$(MACH)/ctfconvert
+CTFMERGE=		$(CTF)/bin/$(MACH)/ctfmerge
+CTFSTABS=		$(CTF)/bin/$(MACH)/ctfstabs
+CTFSTRIP=		$(CTF)/bin/$(MACH)/ctfstrip
+DTRACE_LIBS=		$(PREFIX)/include/dtrace/
+DTRACE=			pfexec /usr/sbin/dtrace -L $(DTRACE_LIBS)
+DTRACE_FRAMES=		-x ustackframes=100
+DTRACEH=		/usr/sbin/dtrace -h -s
+DTRACEG=		/usr/sbin/dtrace -G -64 -s
+SO=			libjsonparse.so.1
+
+TESTINC=		-I /opt/libjsonparse/include
+TESTLDFLAGS=		-R $(PREFIX)lib/64
+TESTLIBS=		-L $(PREFIX)lib/64 -ljsonparse -lc -lumem
+
+# CTFC_POSTPROC=		$(CTFCONVERT) -i -L VERSION $@
+CTFC_POSTPROC=
+
+# CTFM_POSTPROC=		$(CTFMERGE) -L VERSION -o $@ $(C_OBJECTS)
+CTFC_POSTPROC=
+
+CC=			gcc
+CKSTATIC=		clang --analyze $(CINC)
+
+#options for libjsonparse.so
+CFLAGS=			-m64 -fPIC -W -Wall 
+CINC=			-I /opt/libslablist/include -I /opt/libgraph/include\
+			-I /opt/libparse/include
+
+LDFLAGS=		-R $(SLPREFIX)/lib/64:$(SLPREFIX)/lib\
+			-R $(GRPREFIX)/lib/64:$(GRPREFIX)/lib\
+			-R $(PAPREFIX)/lib/64:$(PAPREFIX)/lib\
+			-h libjsonparse.so.1 -shared
+
+LIBS=			-lc -L $(SLPREFIX)/lib/64 -lslablist\
+			-L $(GRPREFIX)/lib/64 -lgraph\
+			-L $(PAPREFIX)/lib/64 -lparse
+
+#options for drv
+DCFLAGS=		-m64
+DCINC=			-I /opt/libjsonparse/include
+DLDFLAGS=		-R $(PREFIX)/lib/64:$(PREFIX)/lib
+DLIBS=			-lc -L $(PREFIX)/lib/64 -lparse -ljsonparse -lumem
+
+DRV_SRCS=		$(DRVDIR)/drv.c
+C_SRCS=			$(SRCDIR)/jsonparse_umem.c\
+			$(SRCDIR)/jsonparse.c
+
+C_HDRS=			$(SRCDIR)/jsonparse.h\
+			$(SRCDIR)/jsonparse_impl.h
+
+PLISTS:=		$(C_SRCS:%.c=%.plist)
+CSTYLES:=		$(C_SRCS:%.c=%.cstyle)
+C_OBJECTS:=		$(C_SRCS:%.c=%.o)
+
+BENCH_SL_THR_HEAP=	$(TOOLS)/throughput_plus_heap.d
+CSTYLE=			$(TOOLS)/cstyle.pl
+
+STACKCOLLAPSE=		$(TOOLS)/stackcollapse.pl
+FLAMEGRAPH=		$(TOOLS)/flamegraph.pl
+
+BENCH_GEN_THR_HEAP=	$(DRVDIR)/throughput_plus_heap.d
+
+MACH_NAME=		zone_8GB
+
+BENCH_PPROC=		$(TOOLS)/throughput.awk
