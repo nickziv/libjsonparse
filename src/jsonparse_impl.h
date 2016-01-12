@@ -21,5 +21,9 @@ struct jsp_ast {
 
 struct jsp_walk {
 	jsp_ast_t *jspw_tree;
+	lp_ast_node_t *jspw_par_obj;
 	lp_ast_node_t *jspw_cur_key;
+	lp_ast_node_t *jspw_cur_val;
+	char *jspw_key;
+	size_t jspw_key_sz;
 };

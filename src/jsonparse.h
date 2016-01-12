@@ -23,7 +23,7 @@ jsp_ast_t *jsp_parse(char *in, size_t sz);
 /* TODO not implemented */
 jsp_walk_t *jsp_create_walker();
 void jsp_destroy_walker(jsp_walk_t *);
-int jsp_walk_member(jsp_ast_t *a, jsp_walk_t *w, char *key);
+int jsp_walk_member(jsp_ast_t *a, jsp_walk_t *w, char *key, size_t sz);
 size_t jsp_value_size(jsp_ast_t *a, jsp_walk_t *w);
 jsp_type_t jsp_value_type(jsp_ast_t *a, jsp_walk_t *w);
 int jsp_value_str(jsp_ast_t *a, jsp_walk_t *w, char *);

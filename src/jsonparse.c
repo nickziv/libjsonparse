@@ -66,7 +66,6 @@ jsp_utf8_byte_tok(lp_grmr_t *g, char *nm, uint8_t byte_min, uint8_t byte_max)
 		    c != '\n' && c != '\b' && c != '\f' &&
 		    c != '\r') {
 			data[i] = c;
-			//printf("Making %x parsable for %s.\n", c, nm);
 			i++;
 		}
 		c++;
@@ -671,6 +670,55 @@ jsp_parse(char *in, size_t sz)
 	return (jast);
 }
 
+void
+jsp_map_query_key_cb(lp_ast_node_t *v, void *arg)
+{
+	jsp_walk_t *w = arg;
+	/*
+	 * We can have more than 1 value mapped to a key (because JSON is
+	 * 'flexible'). For now we just match the first one, and ignore any
+	 * subsequent ones.
+	 */
+	if (w->jspw_cur_val == NULL) {
+		/*
+		 * We now store the value ast-node in the walked. However the
+		 * value is merely a splitter that pointer an object, array, or
+		 * one of the primitive types. We use the splitter
+		 * dereferencing functionality to get the child.
+		 */
+		w->jspw_cur_val = lp_deref_splitter(v);
+	}
+}
+
+
+void
+jsp_map_query_obj_cb(lp_ast_node_t *k, void *arg)
+{
+	/*
+	 * `k` is the value that corresponds to an object's key.
+	 */
+	jsp_walk_t *w = arg;
+	/*
+	 * We can have more than 1 matcihng key mapped to an object (because
+	 * JSON is 'flexible'). For now we just match the first one, and ignore
+	 * any subsequent ones.
+	 */
+	if (w->jspw_cur_key == NULL) {
+		int c = lp_cmp_contents(w->jspw_key, w->jspw_key_sz*8, k);
+		if (c == 0) {
+			w->jspw_cur_key = k;
+			/*
+			 * TODO from here we should do a query against the
+			 * key:val mapping. Once we get the val, we want to
+			 * deref the splitter and store that object in some
+			 * member or something.
+			 */
+			lp_ast_t *ast = w->jspw_tree->jspa_tree;
+			lp_map_query(ast, "key:val", k, jsp_map_query_key_cb, arg);
+		}
+	}
+}
+
 /*
  * This function will try to get to the object that's referred to by `key`. If
  * it finds a key with this value, it will return 0. Otherwise, -1. To get to a
@@ -682,7 +730,30 @@ jsp_parse(char *in, size_t sz)
  * the parse function above.
  */
 int
-jsp_walk_member(jsp_ast_t *a, jsp_walk_t *w, char *key)
+jsp_walk_member(jsp_ast_t *a, jsp_walk_t *w, char *key, size_t sz)
 {
+	lp_ast_t *ast = a->jspa_tree;
+	lp_ast_node_t *root = lp_get_root_node(ast);
+	lp_ast_node_t *obj = root;
+	w->jspw_par_obj = obj;
+	w->jspw_key = key;
+	w->jspw_key_sz = sz;
+	void *arg = w;
+	lp_map_query(ast, "obj:key", obj, jsp_map_query_obj_cb, arg);
+	if (w->jspw_cur_val == NULL) {
+		return (-1);
+	}
+	return (0);
+}
 
+jsp_walk_t *
+jsp_create_walker()
+{
+	return (calloc(1, sizeof (jsp_walk_t)));
+}
+
+void
+jsp_destroy_walker(jsp_walk_t *w)
+{
+	free(w);
 }
